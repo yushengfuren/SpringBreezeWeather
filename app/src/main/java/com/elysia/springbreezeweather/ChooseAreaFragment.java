@@ -28,6 +28,7 @@ import org.litepal.LitePal;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -55,6 +56,8 @@ public class ChooseAreaFragment extends Fragment {
     private City selectedCity;
 
     private int currentLevel;
+
+    private String wanted;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -88,6 +91,7 @@ public class ChooseAreaFragment extends Fragment {
                     String url = "https://geoapi.qweather.com/v2/city/lookup?location="
                             + countyList.get(position).getAdcode()
                             + "&key=a500f59504f440e1af60bcdbc1c0a780";
+                    CountDownLatch latch = new CountDownLatch(1);
                     HttpUtil.sendOkHttpRequest(url, new Callback() {
                         @Override
                         public void onFailure(@NonNull Call call, @NonNull IOException e) {
@@ -96,6 +100,7 @@ public class ChooseAreaFragment extends Fragment {
                                 public void run() {
                                     Toast.makeText(getContext(), "加载失败", Toast.LENGTH_SHORT).show();
                                     closeProgressDialog();
+                                    latch.countDown();
                                 }
                             });
 
@@ -104,22 +109,31 @@ public class ChooseAreaFragment extends Fragment {
                         @Override
                         public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                             String responseText = response.body().string();
-                            getActivity().runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    Intent intent = new Intent(getActivity(), WeatherActivity.class);
-                                    closeProgressDialog();
-                                    intent.putExtra("weather_id", Utility.handleLocationResponse(responseText));
-                                    intent.putExtra("county_name", countyList.get(position).getCountyName());
-                                    // Toast.makeText(getContext(), Utility.handleLocationResponse(responseText), Toast.LENGTH_LONG).show();
-                                    startActivity(intent);
-                                    getActivity().finish();
-                                }
-                            });
-
+                            wanted = Utility.handleLocationResponse(responseText);
+                            latch.countDown();
                         }
                     });
-
+                    try {
+                        latch.await();
+                        if (getActivity() instanceof MainActivity) {
+                            Intent intent = new Intent(getActivity(), WeatherActivity.class);
+                            intent.putExtra("weather_id", wanted);
+                            intent.putExtra("county_name", countyList.get(position).getCountyName());
+                            // Toast.makeText(getContext(), Utility.handleLocationResponse(responseText), Toast.LENGTH_LONG).show();
+                            startActivity(intent);
+                            closeProgressDialog();
+                            getActivity().finish();
+                        } else if (getActivity() instanceof WeatherActivity) {
+                            closeProgressDialog();
+                            WeatherActivity weatherActivity = (WeatherActivity) getActivity();
+                            weatherActivity.setCountyName(countyList.get(position).getCountyName());
+                            weatherActivity.drawerLayout.closeDrawers();
+                            weatherActivity.swipeRefreshLayout.setRefreshing(true);
+                            weatherActivity.requestWeather(wanted);
+                        }
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
 
                 }
             }
