@@ -3,6 +3,9 @@ package com.elysia.springbreezeweather.gson.weather;
 import com.google.gson.annotations.SerializedName;
 
 public class Weather {
+    @SerializedName("adcode")
+    public String adcode;
+
     @SerializedName("name")
     public String name;
 

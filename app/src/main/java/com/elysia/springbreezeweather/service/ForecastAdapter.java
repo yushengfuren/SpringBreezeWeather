@@ -45,8 +45,8 @@ public class ForecastAdapter extends ArrayAdapter<Forecasts.Forecast> {
         nightWeatherIcon.setImageResource(resNightId);
 
         infoText.setText(forecast.textDay);
-        minText.setText(forecast.tempMin);
-        maxText.setText(forecast.tempMax);
+        minText.setText(forecast.tempMin + "℃");
+        maxText.setText(forecast.tempMax + "℃");
 
         return view;
     }

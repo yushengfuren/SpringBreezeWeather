@@ -2,6 +2,8 @@ package com.elysia.springbreezeweather;
 
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.view.View;
@@ -21,6 +23,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.elysia.springbreezeweather.gson.weather.Aqi;
 import com.elysia.springbreezeweather.gson.weather.Forecasts;
@@ -29,6 +32,7 @@ import com.elysia.springbreezeweather.gson.weather.Suggestions;
 import com.elysia.springbreezeweather.gson.weather.Weather;
 import com.elysia.springbreezeweather.service.ForecastAdapter;
 import com.elysia.springbreezeweather.util.HttpUtil;
+import com.elysia.springbreezeweather.util.StringUtil;
 import com.elysia.springbreezeweather.util.Utility;
 import com.google.gson.Gson;
 
@@ -68,11 +72,22 @@ public class WeatherActivity extends AppCompatActivity {
     private Suggestions classSuggestions;
     private Weather classWeather;
 
+    public SwipeRefreshLayout swipeRefreshLayout;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_weather);
+
+//        if (Build.VERSION.SDK_INT >= 21) {
+//            View decorView = getWindow().getDecorView();
+//            decorView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+//            getWindow().setStatusBarColor(Color.TRANSPARENT);
+//        }
+        swipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipe_refresh);
+        swipeRefreshLayout.setColorSchemeResources(R.color.colorPrimary);
 
         classWeather = new Weather();
         classWeather.suggestions = new Suggestions();
@@ -98,15 +113,25 @@ public class WeatherActivity extends AppCompatActivity {
 
         SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(this);
         String weatherString = pref.getString("weather", null);
+        final String weatherId;
+
         if (weatherString != null) {
             Weather weather = Utility.handleWeatherResponse(weatherString);
+            countyName = weather.name;
+            weatherId = weather.adcode;
             showWeatherInfo(weather);
         } else {
-            String weatherId = getIntent().getStringExtra("weather_id");
+            weatherId = getIntent().getStringExtra("weather_id");
             countyName = getIntent().getStringExtra("county_name");
             weatherLayout.setVisibility(View.VISIBLE);
             requestWeather(weatherId);
         }
+        swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                requestWeather(weatherId);
+            }
+        });
 
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -120,9 +145,10 @@ public class WeatherActivity extends AppCompatActivity {
     }
 
     private void showWeatherInfo(Weather weather) {
+
         String cityName = weather.name;
-        String updateTime = weather.nowWeather.now_weather.time;
-        String degree = weather.nowWeather.now_weather.temperature;
+        String updateTime = StringUtil.extractTime(weather.nowWeather.now_weather.time);
+        String degree = weather.nowWeather.now_weather.temperature + "℃";
         String weatherInfo = weather.nowWeather.now_weather.text;
         String weatherIcon = weather.nowWeather.now_weather.icon;
         titleCity.setText(cityName);
@@ -130,7 +156,7 @@ public class WeatherActivity extends AppCompatActivity {
         degreeText.setText(degree);
         weatherInfoText.setText(weatherInfo);
 
-        int resId = getResources().getIdentifier("w" +weather.nowWeather.now_weather.icon, "drawable", getPackageName());
+        int resId = getResources().getIdentifier("w" + weatherIcon, "drawable", getPackageName());
         nowIcon.setImageResource(resId);
 
         forecasts = weather.forecasts;
@@ -278,6 +304,9 @@ public class WeatherActivity extends AppCompatActivity {
 
         try {
             latch.await();
+            swipeRefreshLayout.setRefreshing(false);
+
+            classWeather.adcode = weatherId;
             classWeather.suggestions = classSuggestions;
             classWeather.aqi = classAqi;
             classWeather.nowWeather = classNowWeather;
@@ -289,6 +318,8 @@ public class WeatherActivity extends AppCompatActivity {
             SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(WeatherActivity.this).edit();
             editor.putString("weather", toJson);
             editor.apply();
+//            editor.clear();
+//            editor.apply();
 
             showWeatherInfo(classWeather);
 
