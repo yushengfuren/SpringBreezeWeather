@@ -305,8 +305,8 @@ public class WeatherActivity extends AppCompatActivity {
         String message = "日期: " + forecast.date + "\n" +
                 "最高温度: " + forecast.tempMax + "\n" +
                 "最低温度: " + forecast.tempMin + "\n" +
-                "Day Weather: " + forecast.textDay + "\n" +
-                "Night Weather: " + forecast.textNight;
+                "白天天气: " + forecast.textDay + "\n" +
+                "夜晚天气: " + forecast.textNight;
 
         builder.setMessage(message);
 
