@@ -110,6 +110,7 @@ public class ChooseAreaFragment extends Fragment {
                                     Intent intent = new Intent(getActivity(), WeatherActivity.class);
                                     closeProgressDialog();
                                     intent.putExtra("weather_id", Utility.handleLocationResponse(responseText));
+                                    intent.putExtra("county_name", countyList.get(position).getCountyName());
                                     // Toast.makeText(getContext(), Utility.handleLocationResponse(responseText), Toast.LENGTH_LONG).show();
                                     startActivity(intent);
                                     getActivity().finish();

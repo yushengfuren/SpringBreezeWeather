@@ -6,6 +6,11 @@ import com.elysia.springbreezeweather.db.City;
 import com.elysia.springbreezeweather.db.County;
 import com.elysia.springbreezeweather.db.Province;
 import com.elysia.springbreezeweather.gson.location.Districts;
+import com.elysia.springbreezeweather.gson.weather.Aqi;
+import com.elysia.springbreezeweather.gson.weather.Forecasts;
+import com.elysia.springbreezeweather.gson.weather.NowWeather;
+import com.elysia.springbreezeweather.gson.weather.Suggestions;
+import com.elysia.springbreezeweather.gson.weather.Weather;
 import com.google.gson.Gson;
 
 import org.json.JSONArray;
@@ -16,6 +21,26 @@ public class Utility {
     public static Districts handleDistrictsResponse(String response) {
         Districts districts = new Gson().fromJson(response,Districts.class);
         return districts;
+    }
+
+    public static Aqi handleAqiResponse(String response) {
+        Aqi aqi = new Gson().fromJson(response, Aqi.class);
+        return aqi;
+    }
+
+    public static Forecasts handleForecastsResponse(String response) {
+        Forecasts forecasts = new Gson().fromJson(response, Forecasts.class);
+        return forecasts;
+    }
+
+    public static NowWeather handleNowWeatherResponse(String response) {
+        NowWeather nowWeather = new Gson().fromJson(response, NowWeather.class);
+        return nowWeather;
+    }
+
+    public static Suggestions handleSuggestionsResponse(String response) {
+        Suggestions suggestions = new Gson().fromJson(response, Suggestions.class);
+        return suggestions;
     }
 
     public static boolean handleProvinceResponse(String response) {
@@ -78,5 +103,8 @@ public class Utility {
         return null;
     }
 
-
+    public static Weather handleWeatherResponse(String response) {
+        Weather weather = new Gson().fromJson(response, Weather.class);
+        return weather;
+    }
 }
