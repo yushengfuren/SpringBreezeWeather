@@ -103,6 +103,20 @@ public class Utility {
         return null;
     }
 
+    public static String handleCityResponse(String response) {
+        if (!TextUtils.isEmpty(response)) {
+            try {
+                JSONArray jsonArray = new JSONObject(response).getJSONArray("location");
+                JSONObject jsonObject = jsonArray.getJSONObject(0);
+                return jsonObject.getString("name");
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+        return null;
+    }
+
+
     public static Weather handleWeatherResponse(String response) {
         Weather weather = new Gson().fromJson(response, Weather.class);
         return weather;

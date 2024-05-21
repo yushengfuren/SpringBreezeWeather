@@ -14,7 +14,6 @@ import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.Manifest;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
@@ -68,7 +67,13 @@ public class ChooseAreaFragment extends Fragment {
     private String wanted;
 
     private String district;
+
+    private String latitude;
+    private String  longitude;
+
     AMapLocationClientOption option;
+
+    CountDownLatch latchLoc = new CountDownLatch(1);
 
 
     //声明AMapLocationClient类对象
@@ -79,12 +84,16 @@ public class ChooseAreaFragment extends Fragment {
         public void onLocationChanged(AMapLocation aMapLocation) {
             if (aMapLocation != null) {
                 if (aMapLocation.getErrorCode() == 0) {
-                    district = aMapLocation.getDistrict();
-                    Toast.makeText(getContext(), "定位成功！！！" + district, Toast.LENGTH_LONG).show();
+                    latitude = String.format("%.2f", aMapLocation.getLatitude());
+                    longitude = String.format("%.2f", aMapLocation.getLongitude());
+
+                    Toast.makeText(getContext(), "定位成功！！！", Toast.LENGTH_LONG).show();
+                    latchLoc.countDown();
                 } else {
                     // 显示错误信息ErrCode是错误码，errInfo是错误信息，详见错误码表。
                     String error = "定位失败: " + aMapLocation.getErrorCode() + ", " + aMapLocation.getErrorInfo();
                     Toast.makeText(getContext(), error, Toast.LENGTH_LONG).show();
+                    latchLoc.countDown();
                 }
             }
         }
@@ -104,7 +113,7 @@ public class ChooseAreaFragment extends Fragment {
         backButton = (Button) view.findViewById(R.id.back_button);
         locationButton = (Button) view.findViewById(R.id.location_button);
         listView = (ListView) view.findViewById(R.id.list_view);
-        adapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_list_item_1, dataList);
+        adapter = new ArrayAdapter<>(getContext(), R.layout.list_item_text, dataList);
         listView.setAdapter(adapter);
         return view;
     }
@@ -114,15 +123,22 @@ public class ChooseAreaFragment extends Fragment {
 
         super.onActivityCreated(savedInstanceState);
 
-        // 检查定位权限
-        if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
-            // 申请定位权限
-            ActivityCompat.requestPermissions(getActivity(), new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
-        } else {
-            // 初始化定位
-            initLocation();
+        AMapLocationClient.updatePrivacyShow(getContext(), true, true);
+        AMapLocationClient.updatePrivacyAgree(getContext(), true);
+        try {
+            mLocationClient = new AMapLocationClient(getContext());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
+        mLocationClient.setLocationListener(mLocationListener);
+        option = new AMapLocationClientOption();
+        option.setLocationPurpose(AMapLocationClientOption.AMapLocationPurpose.SignIn);
+        option.setLocationMode(AMapLocationClientOption.AMapLocationMode.Hight_Accuracy);
+        option.setOnceLocation(true);
+        mLocationClient.setLocationOption(option);
+        option.setLocationCacheEnable(false);
+        mLocationClient.stopLocation();
+        mLocationClient.startLocation();
 
 
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -190,8 +206,65 @@ public class ChooseAreaFragment extends Fragment {
         locationButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mLocationClient.setLocationOption(option);
                 mLocationClient.startLocation();
+
+                try {
+                    latchLoc.await();
+
+                    String url = "https://geoapi.qweather.com/v2/city/lookup?location="
+                            + longitude + "," + latitude
+                            + "&key=a500f59504f440e1af60bcdbc1c0a780";
+                    showProgressDialog();
+                    CountDownLatch latch = new CountDownLatch(1);
+
+                    HttpUtil.sendOkHttpRequest(url, new Callback() {
+                        @Override
+                        public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                            getActivity().runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    Toast.makeText(getContext(), "加载失败", Toast.LENGTH_SHORT).show();
+                                    closeProgressDialog();
+                                    latch.countDown();
+                                }
+                            });
+
+                        }
+
+                        @Override
+                        public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                            String responseText = response.body().string();
+                            wanted = Utility.handleLocationResponse(responseText);
+                            district = Utility.handleCityResponse(responseText);
+                            latch.countDown();;
+                            closeProgressDialog();
+                        }
+                    });
+                    try {
+                        latch.await();
+                        if (getActivity() instanceof MainActivity) {
+                            Intent intent = new Intent(getActivity(), WeatherActivity.class);
+                            intent.putExtra("weather_id", wanted);
+                            intent.putExtra("county_name", district);
+                            // Toast.makeText(getContext(), Utility.handleLocationResponse(responseText), Toast.LENGTH_LONG).show();
+                            startActivity(intent);
+                            getActivity().finish();
+                        } else if (getActivity() instanceof WeatherActivity) {
+                            closeProgressDialog();
+                            WeatherActivity weatherActivity = (WeatherActivity) getActivity();
+                            weatherActivity.setCountyName(district);
+                            weatherActivity.drawerLayout.closeDrawers();
+                            weatherActivity.swipeRefreshLayout.setRefreshing(true);
+                            weatherActivity.requestWeather(wanted);
+                        }
+
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
             }
         });
 
@@ -324,42 +397,4 @@ public class ChooseAreaFragment extends Fragment {
         }
     }
 
-    private void initLocation() {
-
-        try {
-            mLocationClient = new AMapLocationClient(getContext());
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
-        mLocationClient.setLocationListener(mLocationListener);
-        option = new AMapLocationClientOption();
-        option.setLocationMode(AMapLocationClientOption.AMapLocationMode.Hight_Accuracy);
-        option.setOnceLocation(true);
-    }
-
-    // 处理权限请求结果
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == 1) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // 用户授予了定位权限
-                initLocation();
-            } else {
-                // 用户拒绝了定位权限
-                Toast.makeText(getContext(), "拒绝定位权限将无法使用定位功能！", Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        // 停止定位
-        if (mLocationClient != null) {
-            mLocationClient.stopLocation();
-            mLocationClient.onDestroy();
-        }
-    }
 }
