@@ -3,6 +3,7 @@ package com.elysia.springbreezeweather;
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -13,10 +14,17 @@ import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.Manifest;
 
 import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
+import com.amap.api.location.AMapLocation;
+import com.amap.api.location.AMapLocationClient;
+import com.amap.api.location.AMapLocationClientOption;
+import com.amap.api.location.AMapLocationListener;
 import com.elysia.springbreezeweather.db.City;
 import com.elysia.springbreezeweather.db.County;
 import com.elysia.springbreezeweather.db.Province;
@@ -59,11 +67,39 @@ public class ChooseAreaFragment extends Fragment {
 
     private String wanted;
 
+    private String district;
+    AMapLocationClientOption option;
+
+
+    //声明AMapLocationClient类对象
+    public AMapLocationClient mLocationClient = null;
+    //声明定位回调监听器
+    public AMapLocationListener mLocationListener = new AMapLocationListener() {
+        @Override
+        public void onLocationChanged(AMapLocation aMapLocation) {
+            if (aMapLocation != null) {
+                if (aMapLocation.getErrorCode() == 0) {
+                    district = aMapLocation.getDistrict();
+                    Toast.makeText(getContext(), "定位成功！！！" + district, Toast.LENGTH_LONG).show();
+                } else {
+                    // 显示错误信息ErrCode是错误码，errInfo是错误信息，详见错误码表。
+                    String error = "定位失败: " + aMapLocation.getErrorCode() + ", " + aMapLocation.getErrorInfo();
+                    Toast.makeText(getContext(), error, Toast.LENGTH_LONG).show();
+                }
+            }
+        }
+    };
+
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         // LitePal.deleteDatabase("demo");
 
         View view = inflater.inflate(R.layout.choose_area, container, false);
+
+        locationButton = (Button) view.findViewById(R.id.location_button);
+
+
         titleText = (TextView) view.findViewById(R.id.title_text);
         backButton = (Button) view.findViewById(R.id.back_button);
         locationButton = (Button) view.findViewById(R.id.location_button);
@@ -77,6 +113,18 @@ public class ChooseAreaFragment extends Fragment {
     public void onActivityCreated(Bundle savedInstanceState) {
 
         super.onActivityCreated(savedInstanceState);
+
+        // 检查定位权限
+        if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            // 申请定位权限
+            ActivityCompat.requestPermissions(getActivity(), new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+        } else {
+            // 初始化定位
+            initLocation();
+        }
+
+
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -138,6 +186,15 @@ public class ChooseAreaFragment extends Fragment {
                 }
             }
         });
+
+        locationButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mLocationClient.setLocationOption(option);
+                mLocationClient.startLocation();
+            }
+        });
+
         backButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -264,6 +321,45 @@ public class ChooseAreaFragment extends Fragment {
     private void closeProgressDialog() {
         if (progressDialog != null) {
             progressDialog.dismiss();
+        }
+    }
+
+    private void initLocation() {
+
+        try {
+            mLocationClient = new AMapLocationClient(getContext());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        mLocationClient.setLocationListener(mLocationListener);
+        option = new AMapLocationClientOption();
+        option.setLocationMode(AMapLocationClientOption.AMapLocationMode.Hight_Accuracy);
+        option.setOnceLocation(true);
+    }
+
+    // 处理权限请求结果
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == 1) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // 用户授予了定位权限
+                initLocation();
+            } else {
+                // 用户拒绝了定位权限
+                Toast.makeText(getContext(), "拒绝定位权限将无法使用定位功能！", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        // 停止定位
+        if (mLocationClient != null) {
+            mLocationClient.stopLocation();
+            mLocationClient.onDestroy();
         }
     }
 }
