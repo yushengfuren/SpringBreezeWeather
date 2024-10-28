@@ -32,9 +32,7 @@
     	</list>
     -->
     <list>
-        <mapping class="com.elysia.springbreezeweather.db.Province" />
-        <mapping class="com.elysia.springbreezeweather.db.City" />
-        <mapping class="com.elysia.springbreezeweather.db.County" />
+
     </list>
 
     <!--

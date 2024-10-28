@@ -89,11 +89,6 @@ public class WeatherActivity extends AppCompatActivity {
         drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
         navButton = (Button) findViewById(R.id.nav_button);
 
-//        if (Build.VERSION.SDK_INT >= 21) {
-//            View decorView = getWindow().getDecorView();
-//            decorView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
-//            getWindow().setStatusBarColor(Color.TRANSPARENT);
-//        }
         swipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipe_refresh);
         swipeRefreshLayout.setColorSchemeResources(R.color.colorPrimary);
 
@@ -191,7 +186,6 @@ public class WeatherActivity extends AppCompatActivity {
         carWashText.setText(carWash);
         sportText.setText(sport);
 
-        weatherLayout.setVisibility(View.VISIBLE);
     }
 
     public void requestWeather(final String weatherId) {
@@ -226,7 +220,6 @@ public class WeatherActivity extends AppCompatActivity {
                         }
                     });
                 }
-                latch.countDown();
             }
         });
 
@@ -363,8 +356,6 @@ public class WeatherActivity extends AppCompatActivity {
             }
         });
 
-        AlertDialog dialog = builder.create();
-        dialog.show();
     }
 
     public void setCountyName(String countyName) {
