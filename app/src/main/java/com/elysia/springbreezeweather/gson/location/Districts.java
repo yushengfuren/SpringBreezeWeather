@@ -6,12 +6,15 @@ import java.util.List;
 
 public class Districts {
 
-    @SerializedName("adcode")
-    public String adcode;
+    public List<District> districts;
+    public class District {
+        @SerializedName("adcode")
+        public String adcode;
 
-    @SerializedName("name")
-    public String name;
+        @SerializedName("name")
+        public String name;
 
-    @SerializedName("districts")
-    public List<District> subDistricts;
+        @SerializedName("districts")
+        public List<District> subDistricts;
+    }
 }
