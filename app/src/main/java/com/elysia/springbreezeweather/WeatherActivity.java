@@ -358,6 +358,8 @@ public class WeatherActivity extends AppCompatActivity {
             }
         });
 
+        AlertDialog dialog = builder.create();
+        dialog.show();
     }
 
     public void setCountyName(String countyName) {
