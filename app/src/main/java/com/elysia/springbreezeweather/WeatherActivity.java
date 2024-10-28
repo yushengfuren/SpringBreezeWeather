@@ -222,6 +222,7 @@ public class WeatherActivity extends AppCompatActivity {
                         }
                     });
                 }
+                latch.countDown();
             }
         });
 
