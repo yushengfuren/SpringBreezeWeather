@@ -92,9 +92,13 @@ public class Utility {
 
     public static String handleLocationResponse(String response) {
         if (!TextUtils.isEmpty(response)) {
-            JSONArray jsonArray = new JSONObject(response).getJSONArray("location");
-            JSONObject jsonObject = jsonArray.getJSONObject(0);
-            return jsonObject.getString("id");
+            try {
+                JSONArray jsonArray = new JSONObject(response).getJSONArray("location");
+                JSONObject jsonObject = jsonArray.getJSONObject(0);
+                return jsonObject.getString("id");
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
         }
         return null;
     }

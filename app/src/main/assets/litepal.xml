@@ -21,7 +21,7 @@
     -->
     <version value="1" />
 
-    <!--
+   <!--
     	Define your models in the list with mapping tag, LitePal will
     	create tables for each mapping class. The supported fields
     	defined in models will be mapped into columns.
@@ -32,6 +32,10 @@
     	</list>
     -->
     <list>
+        <mapping class="com.elysia.springbreezeweather.db.Province" />
+        <mapping class="com.elysia.springbreezeweather.db.City" />
+        <mapping class="com.elysia.springbreezeweather.db.County" />
+    </list>
 
     </list>
 
