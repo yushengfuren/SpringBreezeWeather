@@ -186,6 +186,8 @@ public class WeatherActivity extends AppCompatActivity {
         carWashText.setText(carWash);
         sportText.setText(sport);
 
+         weatherLayout.setVisibility(View.VISIBLE);
+
     }
 
     public void requestWeather(final String weatherId) {
@@ -220,6 +222,7 @@ public class WeatherActivity extends AppCompatActivity {
                         }
                     });
                 }
+                latch.countDown();
             }
         });
 
